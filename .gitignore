@@ -1,0 +1,5 @@
+*.pyc
+.*.swp
+
+/twistd.log
+/TWISTD-CRASH.log
