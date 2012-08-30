@@ -9,8 +9,7 @@ import time
 
 from twisted.application.service import Application, Service
 from twisted.internet import defer, reactor, task
-from twisted.internet.endpoints import clientFromString
-from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.protocol import ClientCreator, ClientFactory, Protocol
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 
@@ -98,19 +97,11 @@ class MuninClient(LineReceiver):
         return d
 
 
-class MuninClientFactory(Factory):
-    protocol = MuninClient
-
-
 class CarbonClient(Protocol):
     def sendStats(self, stats):
         payload = pickle.dumps(stats, 2)
         header = struct.pack('!L', len(payload))
         self.transport.write(header + payload)
-
-
-class CarbonClientFactory(Factory):
-    protocol = CarbonClient
 
 
 class TwistedMuninService(Service):
@@ -126,12 +117,12 @@ class TwistedMuninService(Service):
     @defer.inlineCallbacks
     def collect(self):
         # Start connecting to carbon first, it's remote...
-        carbon_ep = clientFromString(reactor, self.carbon_addr)
-        carbon = carbon_ep.connect(CarbonClientFactory())
+        carbon_c = ClientCreator(reactor, CarbonClient)
+        carbon = carbon_c.connectTCP(*self.carbon_addr)
 
-        munin_ep = clientFromString(reactor, self.munin_addr)
+        munin_c = ClientCreator(reactor, MuninClient)
         try:
-            munin = yield munin_ep.connect(MuninClientFactory())
+            munin = yield munin_c.connectTCP(*self.munin_addr)
         except Exception:
             log.err("Unable to connect to munin-node")
             return
@@ -180,11 +171,11 @@ def main(twistd=False):
 
     host = config_get(config, 'munin', 'host', 'localhost')
     port = int(config_get(config, 'munin', 'port', '4949'))
-    munin_addr = 'tcp:host=%s:port=%i' % (host, port)
+    munin_addr = (host, port)
 
     host = config_get(config, 'carbon', 'host', 'localhost')
     port = int(config_get(config, 'carbon', 'port', '2004'))
-    carbon_addr = 'tcp:host=%s:port=%i' % (host, port)
+    carbon_addr = (host, port)
 
     interval = int(config_get(config, 'general', 'interval', '60'))
 
