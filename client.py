@@ -26,6 +26,7 @@ class MuninClient(LineReceiver):
         self.values = {}
         # expected responses: (name, *args)
         self.queue = [('hello',)]
+        self.node_name = None
 
     def lineReceived(self, line):
         if DEBUG:
@@ -36,9 +37,11 @@ class MuninClient(LineReceiver):
 
     def parse_hello(self, line):
         self.queue.pop(0)
-        m = re.match(r'^# munin node at .+$', line)
+        m = re.match(r'^# munin node at (.+)$', line)
         if not m:
             log.err('Unexpected greeting: %s' % line)
+            return
+        self.node_name = m.group(1)
 
     def parse_list(self, line, d):
         self.queue.pop(0)
@@ -130,7 +133,7 @@ class TwistedMuninService(Service):
         stats = yield munin.collect_metrics(services)
         munin.do_quit()
 
-        reverse_name = '.'.join(socket.getfqdn().split('.')[::-1])
+        reverse_name = '.'.join(munin.node_name.split('.')[::-1])
         flattened = []
         for service, metrics in stats.iteritems():
             for metric, (value, timestamp) in metrics.iteritems():
