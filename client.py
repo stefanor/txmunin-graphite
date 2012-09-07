@@ -62,8 +62,9 @@ class MuninClient(LineReceiver):
         try:
             k, v = line.split()
         except ValueError:
-            log.msg('Unparseable metric: %s' % line)
-            return
+            k, v = line, 0
+            if DEBUG:
+                log.msg('No value for metric %s. Assuming 0' % k)
         self.values[k] = (v, time.time())
 
     def do_list(self):
