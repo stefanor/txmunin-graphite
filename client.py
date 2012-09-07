@@ -3,13 +3,12 @@
 import cPickle as pickle
 import ConfigParser
 import re
-import socket
 import struct
 import time
 
 from twisted.application.service import Application, Service
 from twisted.internet import defer, reactor, task
-from twisted.internet.protocol import ClientCreator, ClientFactory, Protocol
+from twisted.internet.protocol import ClientCreator, Protocol
 from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 
